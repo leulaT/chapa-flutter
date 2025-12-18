@@ -1,3 +1,4 @@
+import 'package:chapasdk/domain/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
 // ignore: must_be_immutable
@@ -27,21 +28,25 @@ class CustomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Size deviceSize = MediaQuery.of(context).size;
-    return SizedBox(
-      width: deviceSize.width,
-      height: deviceSize.height * 0.048,
-      child: ElevatedButton(
-        style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(
-          backgroundColor ?? Theme.of(context).primaryColor,
-        )),
-        onPressed: () {
-          onPressed();
-        },
-        child: Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
+    return GestureDetector(
+      onTap: () {
+        onPressed();
+      },
+      child: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration( 
+            color: backgroundColor ?? AppColors.chapaPrimaryColor,
+            borderRadius: BorderRadius.circular(15)),
+        width: deviceSize.width,
+        height: deviceSize.height * 0.05,
+        child: Center(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
         ),
       ),

@@ -81,7 +81,7 @@ class ChapaNativePayment extends StatefulWidget {
     required this.txRef,
     required this.title,
     required this.desc,
-    required this.namedRouteFallBack,
+    this.namedRouteFallBack = '',
     required this.currency,
     this.buttonColor,
     this.showPaymentMethodsOnGridView,
@@ -140,17 +140,46 @@ class _ChapaNativePaymentState extends State<ChapaNativePayment> {
     super.dispose();
   }
 
-  exitPaymentPage(
+  // void exitPaymentPage(
+  //   String message,
+  //   String? chapaTransactionRef,
+  // ) {
+  //   if (widget.namedRouteFallBack.isEmpty) {
+  //     widget.onPaymentFinished!(
+  //       message,
+  //       chapaTransactionRef ?? widget.txRef,
+  //       widget.amount,
+  //     );
+  //   } else {
+  //     Navigator.pushNamedAndRemoveUntil(
+  //       context,
+  //       widget.namedRouteFallBack,
+  //       (Route<dynamic> route) => false,
+  //       arguments: {
+  //         'message': message,
+  //         'transactionReference': chapaTransactionRef ?? widget.txRef,
+  //         'paidAmount': widget.amount
+  //       },
+  //     );
+  //   }
+  // }
+
+  void exitPaymentPage(
     String message,
     String? chapaTransactionRef,
   ) {
-    if (widget.namedRouteFallBack.isEmpty) {
+    // Always call the callback if it's provided
+    if (widget.onPaymentFinished != null) {
       widget.onPaymentFinished!(
         message,
         chapaTransactionRef ?? widget.txRef,
         widget.amount,
       );
-    } else {
+    }
+
+    // Only navigate if namedRouteFallBack is not empty and no callback is provided
+    if (widget.namedRouteFallBack.isNotEmpty &&
+        widget.onPaymentFinished == null) {
       Navigator.pushNamedAndRemoveUntil(
         context,
         widget.namedRouteFallBack,
@@ -192,7 +221,7 @@ class _ChapaNativePaymentState extends State<ChapaNativePayment> {
     );
   }
 
-  _hideDialog() {
+  void _hideDialog() {
     if (_isDialogShowing) {
       Navigator.of(context, rootNavigator: true).pop();
       setState(() => _isDialogShowing = false);
@@ -218,34 +247,44 @@ class _ChapaNativePaymentState extends State<ChapaNativePayment> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
-      body: StreamBuilder<NetworkState>(
-        stream: _networkBloc.stream,
-        initialData: NetworkInitial(),
-        builder: (context, netSnapshot) {
-          if (netSnapshot.hasData) {
-            final netState = netSnapshot.data;
-            if (netState is OnNetworkNotConnected) {
-              return const NoConnection();
-            } else {
-              return StreamBuilder<ChapaNativeCheckoutState>(
-                stream: _chapaNativeCheckoutBloc.stream,
-                initialData: ChapaNativeCheckoutInitial(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    final state = snapshot.data;
-                    return _buildStreamState(state, deviceSize);
-                  } else {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-                },
-              );
-            }
-          } else {
-            return const NoConnection();
-          }
-        },
+      body: SizedBox(
+        height: MediaQuery.of(context).size.height - 60,
+        child: SingleChildScrollView(
+          child: StreamBuilder<NetworkState>(
+            stream: _networkBloc.stream,
+            initialData: NetworkInitial(),
+            builder: (context, netSnapshot) {
+              if (netSnapshot.hasData) {
+                final netState = netSnapshot.data;
+                if (netState is OnNetworkNotConnected) {
+                  return const NoConnection();
+                } else {
+                  return StreamBuilder<ChapaNativeCheckoutState>(
+                    stream: _chapaNativeCheckoutBloc.stream,
+                    initialData: ChapaNativeCheckoutInitial(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final state = snapshot.data;
+                        return _buildStreamState(state, deviceSize);
+                      } else {
+                        return const Center(
+                          child: Column(
+                            children: [
+                              SizedBox(height: 120),
+                              CircularProgressIndicator(),
+                            ],
+                          ),
+                        );
+                      }
+                    },
+                  );
+                }
+              } else {
+                return const NoConnection();
+              }
+            },
+          ),
+        ),
       ),
     );
   }
@@ -459,7 +498,6 @@ class _ChapaNativePaymentState extends State<ChapaNativePayment> {
                   }
                 },
               ),
-              Spacer(),
             ],
           ),
         ),
@@ -530,6 +568,10 @@ class _ChapaNativePaymentState extends State<ChapaNativePayment> {
         ),
       );
     } else {
+      exitPaymentPage(
+        'paymentSuccessful',
+        state.directChargeValidateResponse.trxRef,
+      );
       return Padding(
         padding: EdgeInsets.symmetric(
           horizontal: deviceSize.width * 0.04,
@@ -578,7 +620,6 @@ class _ChapaNativePaymentState extends State<ChapaNativePayment> {
                       .labelSmall!
                       .copyWith(color: Colors.grey),
                 ),
-                Spacer(),
                 Text(
                   state.directChargeValidateResponse.processorId ?? "",
                   style: Theme.of(context).textTheme.labelSmall,
@@ -667,15 +708,14 @@ class _ChapaNativePaymentState extends State<ChapaNativePayment> {
               width: deviceSize.width * 0.72,
               child: CustomButton(
                 onPressed: () {
-                  exitPaymentPage(
-                    'paymentSuccessful',
-                    state.directChargeValidateResponse.trxRef,
-                  );
+                  Navigator.pop(context);
                 },
                 title: "Finish",
               ),
             ),
-            Spacer(),
+            SizedBox(
+              height: deviceSize.height * 0.008,
+            ),
             Image.asset(
               AppImages.chapaFullLogo,
               width: deviceSize.width * 0.28,
